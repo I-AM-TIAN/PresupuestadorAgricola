@@ -1,26 +1,31 @@
-<div class="grid grid-cols-1 md:grid-cols-2 gap-6 text-sm mt-6">
+<div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
     <div class="p-4 bg-white dark:bg-gray-800 rounded shadow">
         <h3 class="font-bold text-gray-800 dark:text-white">📦 Cantidad producida</h3>
         <p>{{ $quantity }} unidades</p>
     </div>
 
     <div class="p-4 bg-white dark:bg-gray-800 rounded shadow">
-        <h3 class="font-bold text-gray-800 dark:text-white">📈 Margen de ganancia</h3>
+        <h3 class="font-bold text-gray-800 dark:text-white">🏷️ Nombre del producto</h3>
+        <p>{{ $name }}</p>
+    </div>
+
+    <div class="p-4 bg-white dark:bg-gray-800 rounded shadow">
+        <h3 class="font-bold text-gray-800 dark:text-white">🧾 Margen de ganancia</h3>
         <p>{{ $margin }} %</p>
     </div>
 
     <div class="p-4 bg-white dark:bg-gray-800 rounded shadow">
-        <h3 class="font-bold text-gray-800 dark:text-white">🧪 Total materiales</h3>
+        <h3 class="font-bold text-gray-800 dark:text-white">🧃 Total materiales</h3>
         <p>${{ number_format($materials, 2) }}</p>
     </div>
 
     <div class="p-4 bg-white dark:bg-gray-800 rounded shadow">
-        <h3 class="font-bold text-gray-800 dark:text-white">🧑‍🌾 Total mano de obra</h3>
+        <h3 class="font-bold text-gray-800 dark:text-white">👷 Total mano de obra</h3>
         <p>${{ number_format($labor, 2) }}</p>
     </div>
 
     <div class="p-4 bg-white dark:bg-gray-800 rounded shadow">
-        <h3 class="font-bold text-gray-800 dark:text-white">🚚 Costos indirectos</h3>
+        <h3 class="font-bold text-gray-800 dark:text-white">🚛 Costos indirectos</h3>
         <p>${{ number_format($indirect, 2) }}</p>
     </div>
 

@@ -2,12 +2,17 @@
 
 namespace App\Filament\Admin\Pages;
 
+use App\Models\CostSheet;
+use Filament\Forms\Components\Actions\Action;
 use Filament\Pages\Page;
 use Filament\Forms;
+use Filament\Forms\Components\Actions;
+use Filament\Forms\Components\View;
 use Filament\Forms\Contracts\HasForms;
 use Filament\Forms\Concerns\InteractsWithForms;
 use Filament\Forms\Components\Wizard;
 use Filament\Forms\Components\Wizard\Step;
+use Filament\Notifications\Notification;
 
 class CostCalculator extends Page implements HasForms
 {
@@ -20,6 +25,16 @@ class CostCalculator extends Page implements HasForms
 
     public function mount(): void
     {
+        // Solo establecer si está vacío
+        if (empty($this->formData)) {
+            $this->formData = [
+                'materials' => [['description' => '', 'cost' => 0]],
+                'labor'     => [['description' => '', 'cost' => 0]],
+                'indirect'  => [['description' => '', 'cost' => 0]],
+                'quantity'  => 1,
+                'margin'    => 0,
+            ];
+        }
         $this->form->fill($this->formData);
     }
 
@@ -35,6 +50,11 @@ class CostCalculator extends Page implements HasForms
                 // Paso 1 - Datos generales
                 Step::make('Datos generales')
                     ->schema([
+                        Forms\Components\TextInput::make('name')
+                            ->label('Nombre del producto')
+                            ->required()
+                            ->maxLength(255),
+
                         Forms\Components\TextInput::make('quantity')
                             ->label('Cantidad producida')
                             ->numeric()
@@ -71,7 +91,7 @@ class CostCalculator extends Page implements HasForms
                             ->default([
                                 ['description' => '', 'cost' => 0],
                             ])
-                            ->itemLabel(fn ($state) => $state['description'] ?? 'Material'),
+                            ->itemLabel(fn($state) => $state['description'] ?? 'Material'),
                     ]),
 
                 // Paso 3 - Mano de obra
@@ -96,7 +116,7 @@ class CostCalculator extends Page implements HasForms
                             ->default([
                                 ['description' => '', 'cost' => 0],
                             ])
-                            ->itemLabel(fn ($state) => $state['description'] ?? 'Mano de obra'),
+                            ->itemLabel(fn($state) => $state['description'] ?? 'Mano de obra'),
                     ]),
 
                 // Paso 4 - Costos indirectos
@@ -121,40 +141,46 @@ class CostCalculator extends Page implements HasForms
                             ->default([
                                 ['description' => '', 'cost' => 0],
                             ])
-                            ->itemLabel(fn ($state) => $state['description'] ?? 'Indirecto'),
+                            ->itemLabel(fn($state) => $state['description'] ?? 'Indirecto'),
                     ]),
 
                 // Paso 5 - Resumen
                 Step::make('Resumen final')
                     ->schema([
-                        Forms\Components\Placeholder::make('Resumen')
-                            ->content(function () {
-                                return view('filament.admin.pages.summary', [
-                                    'quantity'    => $this->formData['quantity'] ?? 0,
-                                    'margin'      => $this->formData['margin'] ?? 0,
-                                    'materials'   => $this->getCategoryTotal('materials'),
-                                    'labor'       => $this->getCategoryTotal('labor'),
-                                    'indirect'    => $this->getCategoryTotal('indirect'),
-                                    'total'       => $this->getTotalCost(),
-                                    'unitPrice'   => $this->getUnitPrice(),
-                                ])->render();
-                            }),
+                        View::make('filament.admin.pages.summary')
+                            ->viewData([
+                                'name'        => $this->formData['name'] ?? '',
+                                'quantity'    => $this->formData['quantity'] ?? 0,
+                                'margin'      => $this->formData['margin'] ?? 0,
+                                'materials'   => $this->getCategoryTotal('materials'),
+                                'labor'       => $this->getCategoryTotal('labor'),
+                                'indirect'    => $this->getCategoryTotal('indirect'),
+                                'total'       => $this->getTotalCost(),
+                                'unitPrice'   => $this->getUnitPrice(),
+                            ]),
+                            Actions::make([
+                                Action::make('save')
+                                    ->label('Guardar hoja de costos')
+                                    ->color('success')
+                                    ->icon('heroicon-o-check-circle')
+                                    ->action('submit'),
+                            ]),
                     ]),
-                ]),
+            ])
         ];
     }
 
     public function getCategoryTotal(string $key): float
     {
         return collect($this->formData[$key] ?? [])
-            ->sum(fn ($item) => floatval($item['cost'] ?? 0));
+            ->sum(fn($item) => floatval($item['cost'] ?? 0));
     }
 
     public function getTotalCost(): float
     {
         return $this->getCategoryTotal('materials')
-             + $this->getCategoryTotal('labor')
-             + $this->getCategoryTotal('indirect');
+            + $this->getCategoryTotal('labor')
+            + $this->getCategoryTotal('indirect');
     }
 
     public function getUnitPrice(): float
@@ -166,5 +192,28 @@ class CostCalculator extends Page implements HasForms
         $margin = floatval($this->formData['margin'] ?? 0);
 
         return $base * (1 + $margin / 100);
+    }
+
+    public function submit(): void
+    {
+        $data = $this->form->getState();
+
+        CostSheet::create([
+            'name'        => $data['name'],
+            'quantity'    => $data['quantity'],
+            'margin'      => $data['margin'],
+            'materials'   => $data['materials'],
+            'labor'       => $data['labor'],
+            'indirect'    => $data['indirect'],
+            'total_cost'  => $this->getTotalCost(),
+            'unit_price'  => $this->getUnitPrice(),
+        ]);
+
+        Notification::make()
+            ->title('Hoja de costos guardada correctamente ✅')
+            ->success()
+            ->send();
+
+        $this->redirect(static::getUrl());
     }
 }
